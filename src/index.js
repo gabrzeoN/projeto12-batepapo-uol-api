@@ -70,6 +70,41 @@ app.get("/participants", async (req, res) => {
     }
 });
 
+app.post("/messages", async (req, res) => {
+    const {to, text, type} = req.body;
+    const {user: from} = req.headers;
+    let nameAlreadyExist = [];
+
+    console.log(req.body);
+    console.log(from);
+    // const validation = userSchema.validate({name}, {abortEarly: false});
+    // if(validation.error){
+    //     console.log(validation.error.details.map(detail => detail.message)); // TODO: erase me
+    //     return res.status(422).send("Nome deve ser string não vazio!");
+    // }
+
+    try{
+        // nameAlreadyExist = await db.collection("participants").findOne({name});
+        // if(nameAlreadyExist){
+        //     return res.status(409).send("O nome escolhido já existe!");
+        // }
+
+        // await db.collection("messages").insertOne({
+        //     from: name,
+        //     to: 'Todos',
+        //     text: 'entra na sala...',
+        //     type: 'status',
+        //     time: dayjs().format('HH:mm:ss')
+        // });
+
+        // await db.collection("participants").insertOne({name, lastStatus: Date.now()});
+        res.sendStatus(201);
+    }catch(e){
+        console.log("Error on POST /messages", e);
+        res.sendStatus(500);
+    }
+});
+
 
     // const participants = {
     //    name: 'João',
