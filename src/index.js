@@ -29,15 +29,21 @@ const userSchema = joi.object({
 
 app.post("/participants", async (req, res) => {
     const {name} = req.body;
+    let nameAlreadyExist = [];
 
     const validation = userSchema.validate({name}, {abortEarly: false});
     if(validation.error){
         console.log(validation.error.details.map(detail => detail.message)); // TODO: erase me
-        return res.status(422).send("name deve ser string não vazio!");
+        return res.status(422).send("Nome deve ser string não vazio!");
     }
 
     try{
-        await db.collection("participants").insertOne({name});
+        nameAlreadyExist = await db.collection("participants").findOne({name});
+        if(nameAlreadyExist){
+            return res.status(409).send("O nome escolhido já existe!");
+        }
+
+        await db.collection("participants").insertOne({name, lastStatus: Date.now()});
         res.sendStatus(201);
     }catch(e){
         console.log("Error on POST /participants", e);
