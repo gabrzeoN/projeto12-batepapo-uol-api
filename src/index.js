@@ -27,6 +27,12 @@ mongoClient.connect()
 const userSchema = joi.object({
     name: joi.string().required()
 });
+const messageSchema = joi.object({
+    from: joi.string().required(),
+    to: joi.string().required(),
+    text: joi.string().required(),
+    type: joi.string().required(),
+});
 
 app.post("/participants", async (req, res) => {
     const {name} = req.body;
@@ -73,31 +79,25 @@ app.get("/participants", async (req, res) => {
 app.post("/messages", async (req, res) => {
     const {to, text, type} = req.body;
     const {user: from} = req.headers;
-    let nameAlreadyExist = [];
+    let participantExists = {};
 
-    console.log(req.body);
-    console.log(from);
-    // const validation = userSchema.validate({name}, {abortEarly: false});
-    // if(validation.error){
-    //     console.log(validation.error.details.map(detail => detail.message)); // TODO: erase me
-    //     return res.status(422).send("Nome deve ser string não vazio!");
-    // }
+    const validation = messageSchema.validate({from, to, text, type}, {abortEarly: false});
+    if(validation.error || (type !== "private_message" && type !== "message")){
+        return res.status(422).send("Erro ao enviar mensagem!");
+    }
 
     try{
-        // nameAlreadyExist = await db.collection("participants").findOne({name});
-        // if(nameAlreadyExist){
-        //     return res.status(409).send("O nome escolhido já existe!");
-        // }
-
-        // await db.collection("messages").insertOne({
-        //     from: name,
-        //     to: 'Todos',
-        //     text: 'entra na sala...',
-        //     type: 'status',
-        //     time: dayjs().format('HH:mm:ss')
-        // });
-
-        // await db.collection("participants").insertOne({name, lastStatus: Date.now()});
+        participantExists = await db.collection("participants").findOne({name: from});
+        if(!participantExists){
+            return res.status(422).send("Não foi possível enviar a mensagem pois você não está logado!");
+        }
+        await db.collection("messages").insertOne({
+            from,
+            to,
+            text,
+            type,
+            time: dayjs().format('HH:mm:ss')
+        });
         res.sendStatus(201);
     }catch(e){
         console.log("Error on POST /messages", e);
