@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import chalk from "chalk";
 import cors from "cors";
 import joi from "joi";
+import dayjs from "dayjs";
 
 // Server configurations
 dotenv.config();
@@ -42,6 +43,14 @@ app.post("/participants", async (req, res) => {
         if(nameAlreadyExist){
             return res.status(409).send("O nome escolhido já existe!");
         }
+
+        await db.collection("messages").insertOne({
+            from: name,
+            to: 'Todos',
+            text: 'entra na sala...',
+            type: 'status',
+            time: dayjs().format('HH:mm:ss')
+        });
 
         await db.collection("participants").insertOne({name, lastStatus: Date.now()});
         res.sendStatus(201);
