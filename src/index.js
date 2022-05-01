@@ -11,7 +11,6 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.listen(process.env.PORT, () => console.log(chalk.bold.green(`Server online on port ${process.env.PORT}!`)));
 
 // Database configurations
 let db = null;
@@ -22,7 +21,7 @@ mongoClient.connect()
     console.log(chalk.bold.green("Connected to database!"));
 })
 .catch((error) => console.log(chalk.bold.red("Could't connet to database!"), error));
-        
+
 // Joi schemas
 const userSchema = joi.object({
     name: joi.string().required()
@@ -37,13 +36,13 @@ const messageSchema = joi.object({
 app.post("/participants", async (req, res) => {
     const {name} = req.body;
     let nameAlreadyExist = [];
-
+    
     const validation = userSchema.validate({name}, {abortEarly: false});
     if(validation.error){
         console.log(validation.error.details.map(detail => detail.message)); // TODO: erase me
         return res.status(422).send("Nome deve ser string não vazio!");
     }
-
+    
     try{
         nameAlreadyExist = await db.collection("participants").findOne({name});
         if(nameAlreadyExist){
@@ -57,7 +56,7 @@ app.post("/participants", async (req, res) => {
             type: 'status',
             time: dayjs().format('HH:mm:ss')
         });
-
+        
         await db.collection("participants").insertOne({name, lastStatus: Date.now()});
         res.sendStatus(201);
     }catch(e){
@@ -80,12 +79,12 @@ app.post("/messages", async (req, res) => {
     const {to, text, type} = req.body;
     const {user: from} = req.headers;
     let participantExists = {};
-
+    
     const validation = messageSchema.validate({from, to, text, type}, {abortEarly: false});
     if(validation.error || (type !== "private_message" && type !== "message")){
         return res.status(422).send("Erro ao enviar mensagem!");
     }
-
+    
     try{
         participantExists = await db.collection("participants").findOne({name: from});
         if(!participantExists){
@@ -114,11 +113,11 @@ app.get("/messages", async (req, res) => {
     // ana:     3      enviou:1     recebeu:2
     // julia:   3      enviou:1     recebeu:1
     // gus:     1      enviou:1     recebeu:0
-
+    
     try{
         const allMessages = await db.collection("messages").find({ $or: [ { from: user }, { to: user }, { to: "Todos" }, { type: "message" } ] }).toArray();
         // const allMessages = await db.collection("messages").find({}).toArray();
-
+        
         console.log("allMessages: ", allMessages.length)// TODO:erase me
         allMessages.reverse();
         if(!limit){
@@ -141,14 +140,14 @@ app.get("/messages", async (req, res) => {
 app.post("/status", async (req, res) => {
     const {user: name} = req.headers;
     console.log(name);////////////////
-
+    
     // const validation = userSchema.validate({name}, {abortEarly: false});
     // if(validation.error){
-    //     return res.status(422).send("Erro ao atualizar status do usuário!");
-    // }
-
-    try{
-        const participantExists = await db.collection("participants").findOne({name});
+        //     return res.status(422).send("Erro ao atualizar status do usuário!");
+        // }
+        
+        try{
+            const participantExists = await db.collection("participants").findOne({name});
         if(!participantExists){
             return res.sendStatus(404);
         }
@@ -156,10 +155,36 @@ app.post("/status", async (req, res) => {
         await db.collection("participants").updateOne(
             {name: participantExists.name},
             {$set: {lastStatus: Date.now()}}
-        );
-        res.sendStatus(200);
-    }catch(e){
-        console.log("Error on POST /messages", e);
-        res.sendStatus(500);
+            );
+            res.sendStatus(200);
+        }catch(e){
+            console.log("Error on POST /messages", e);
+            res.sendStatus(500);
     }
 });
+
+async function removeInactiveUsers(){
+    try{
+        const participants = await db.collection("participants").find({}).toArray();
+        const remove = participants.filter(({lastStatus}) => compareTime(lastStatus, 10000));
+        console.log("removing", remove);//////////
+        if(!remove) return
+        
+        for(let i = 0; i < remove.length; i++){
+            await db.collection("participants").deleteOne({name: remove[i].name});
+        }
+        return
+        
+    }catch(e){
+        console.log("Error on removeInactiveUsers", e);
+    }
+    return 0;
+}
+
+function compareTime(timeThen, milliseconds){
+    if(Date.now() - timeThen >= milliseconds) return true;
+    else return false;
+}
+
+setInterval(removeInactiveUsers, 15000);
+app.listen(process.env.PORT, () => console.log(chalk.bold.green(`Server online on port ${process.env.PORT}!`)));
