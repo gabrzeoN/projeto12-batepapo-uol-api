@@ -137,3 +137,32 @@ app.get("/messages", async (req, res) => {
         res.send(500);
     }
 });
+
+app.post("/status", async (req, res) => {
+    const {user: name} = req.headers;
+    let participantExists = {};
+    console.log(name);
+
+    const validation = userSchema.validate({name}, {abortEarly: false});
+    if(validation.error){
+        return res.status(422).send("Erro ao atualizar status do usuário!");
+    }
+
+    try{
+        // participantExists = await db.collection("participants").findOne({name: from});
+        // if(!participantExists){
+        //     return res.status(422).send("Não foi possível enviar a mensagem pois você não está logado!");
+        // }
+        // await db.collection("messages").insertOne({
+        //     from,
+        //     to,
+        //     text,
+        //     type,
+        //     time: dayjs().format('HH:mm:ss')
+        // });
+        res.sendStatus(200);
+    }catch(e){
+        console.log("Error on POST /messages", e);
+        res.sendStatus(500);
+    }
+});
