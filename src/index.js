@@ -142,24 +142,21 @@ app.post("/status", async (req, res) => {
     const {user: name} = req.headers;
     console.log(name);////////////////
 
-    const validation = userSchema.validate({name}, {abortEarly: false});
-    if(validation.error){
-        return res.status(422).send("Erro ao atualizar status do usuário!");
-    }
+    // const validation = userSchema.validate({name}, {abortEarly: false});
+    // if(validation.error){
+    //     return res.status(422).send("Erro ao atualizar status do usuário!");
+    // }
 
     try{
         const participantExists = await db.collection("participants").findOne({name});
         if(!participantExists){
             return res.sendStatus(404);
         }
-        console.log(participantExists)
-        // await db.collection("messages").insertOne({
-        //     from,
-        //     to,
-        //     text,
-        //     type,
-        //     time: dayjs().format('HH:mm:ss')
-        // });
+
+        await db.collection("participants").updateOne(
+            {name: participantExists.name},
+            {$set: {lastStatus: Date.now()}}
+        );
         res.sendStatus(200);
     }catch(e){
         console.log("Error on POST /messages", e);
