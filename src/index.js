@@ -140,8 +140,7 @@ app.get("/messages", async (req, res) => {
 
 app.post("/status", async (req, res) => {
     const {user: name} = req.headers;
-    let participantExists = {};
-    console.log(name);
+    console.log(name);////////////////
 
     const validation = userSchema.validate({name}, {abortEarly: false});
     if(validation.error){
@@ -149,10 +148,11 @@ app.post("/status", async (req, res) => {
     }
 
     try{
-        // participantExists = await db.collection("participants").findOne({name: from});
-        // if(!participantExists){
-        //     return res.status(422).send("Não foi possível enviar a mensagem pois você não está logado!");
-        // }
+        const participantExists = await db.collection("participants").findOne({name});
+        if(!participantExists){
+            return res.sendStatus(404);
+        }
+        console.log(participantExists)
         // await db.collection("messages").insertOne({
         //     from,
         //     to,
