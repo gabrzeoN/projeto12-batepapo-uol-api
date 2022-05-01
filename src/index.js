@@ -167,18 +167,21 @@ async function removeInactiveUsers(){
     try{
         const participants = await db.collection("participants").find({}).toArray();
         const remove = participants.filter(({lastStatus}) => compareTime(lastStatus, 10000));
-        console.log("removing", remove);//////////
-        if(!remove) return
-        
+        if(!remove) return;
+
         for(let i = 0; i < remove.length; i++){
+            await db.collection("messages").insertOne({
+                from: remove[i].name,
+                to: 'Todos',
+                text: 'sai da sala...',
+                type: 'status',
+                time: dayjs().format('HH:mm:ss')
+            });
             await db.collection("participants").deleteOne({name: remove[i].name});
         }
-        return
-        
     }catch(e){
         console.log("Error on removeInactiveUsers", e);
     }
-    return 0;
 }
 
 function compareTime(timeThen, milliseconds){
