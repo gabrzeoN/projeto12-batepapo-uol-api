@@ -105,16 +105,35 @@ app.post("/messages", async (req, res) => {
     }
 });
 
-
-    // const participants = {
-    //    name: 'João',
-    //    lastStatus: 12313123
-    // }
+app.get("/messages", async (req, res) => {
+    const { user } = req.headers;
+    const limit = parseInt(req.query.limit);
     
-    // const messages = {
-    //     from: 'João',
-    //     to: 'Todos',
-    //     text: 'oi galera',
-    //     type: 'message',
-    //     time: '20:04:37'
-    // }
+    // gabriel: 10     enviou:7     recebeu:3
+    // didi:    7      enviou:5     recebeu:2
+    // ana:     3      enviou:1     recebeu:2
+    // julia:   3      enviou:1     recebeu:1
+    // gus:     1      enviou:1     recebeu:0
+
+    try{
+        const allMessages = await db.collection("messages").find({ $or: [ { from: user }, { to: user }, { to: "Todos" }, { type: "message" } ] }).toArray();
+        // const allMessages = await db.collection("messages").find({}).toArray();
+
+        console.log("allMessages: ", allMessages.length)// TODO:erase me
+        allMessages.reverse();
+        if(!limit){
+            console.log("No limit") // TODO:erase me
+            return res.status(200).send(allMessages);
+        }else{
+            const messages = [];
+            for(let i = 0; (i < allMessages.length && i < limit); i++){
+                messages.push(allMessages[i]);
+            }
+            console.log(`Limit ${limit}`) // TODO:erase me
+            return res.status(200).send(messages);
+        }
+    }catch(e){
+        console.log("Error on GET/messages", e);
+        res.send(500);
+    }
+});
