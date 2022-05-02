@@ -163,6 +163,19 @@ app.post("/status", async (req, res) => {
     }
 });
 
+app.delete("/messages/:messageID", async (req, res) => {
+    const {messageID} = req.params;
+    const {user} = req.headers;
+    console.log("messageID", messageID);
+    console.log("user", user);
+
+    try{
+        res.sendStatus(200);
+    }catch(e){
+        res.sendStatus(500);
+    }
+});
+
 async function removeInactiveUsers(){
     try{
         const participants = await db.collection("participants").find({}).toArray();
