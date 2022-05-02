@@ -181,6 +181,34 @@ app.delete("/messages/:messageID", async (req, res) => {
     }
 });
 
+app.put("/messages/:messageID", async (req, res) => {
+    const {to, text, type} = req.body;
+    const {user: from} = req.headers;
+    
+    console.log(to, text, type, from)
+    const validation = messageSchema.validate({from, to, text, type}, {abortEarly: false});
+    if(validation.error || (type !== "private_message" && type !== "message")){
+        return res.status(422).send("Erro ao enviar mensagem!");
+    }
+        
+    try{
+        const participantExists = await db.collection("participants").findOne({name: from});
+        if(!participantExists){
+            return res.sendStatus(404);
+        }
+        console.log(participantExists);
+
+        // await db.collection("participants").updateOne(
+        //     {name: participantExists.name},
+        //     {$set: {lastStatus: Date.now()}}
+        //     );
+        res.sendStatus(200);
+    }catch(e){
+        console.log("Error on PUT/messages", e);
+        res.sendStatus(500);
+    }
+});
+
 async function removeInactiveUsers(){
     try{
         const participants = await db.collection("participants").find({}).toArray();
