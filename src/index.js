@@ -184,8 +184,9 @@ app.delete("/messages/:messageID", async (req, res) => {
 app.put("/messages/:messageID", async (req, res) => {
     const {to, text, type} = req.body;
     const {user: from} = req.headers;
-    
-    console.log(to, text, type, from)
+    const {messageID} = req.params;
+
+    console.log(to, text, type, from, messageID)
     const validation = messageSchema.validate({from, to, text, type}, {abortEarly: false});
     if(validation.error || (type !== "private_message" && type !== "message")){
         return res.status(422).send("Erro ao enviar mensagem!");
@@ -194,14 +195,20 @@ app.put("/messages/:messageID", async (req, res) => {
     try{
         const participantExists = await db.collection("participants").findOne({name: from});
         if(!participantExists){
-            return res.sendStatus(404);
+            return res.status(404).send("Usuário não encontrado!");
         }
-        console.log(participantExists);
 
-        // await db.collection("participants").updateOne(
-        //     {name: participantExists.name},
-        //     {$set: {lastStatus: Date.now()}}
-        //     );
+        const changeMessage = await db.collection("messages").findOne({_id: new ObjectId(messageID)});
+        if(!changeMessage){
+            return res.status(404).send("Essa mensagem não existe!");
+        }else if(changeMessage.from !== from){
+            return res.status(401).send("Você não tem autorização para deletar essa mensagem!");
+        }
+
+        await db.collection("messages").updateOne(
+            {_id: new ObjectId(messageID)},
+            {$set: {to, text, type}}
+        );
         res.sendStatus(200);
     }catch(e){
         console.log("Error on PUT/messages", e);
