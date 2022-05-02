@@ -1,4 +1,4 @@
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import express from "express";
 import dotenv from "dotenv";
 import chalk from "chalk";
@@ -164,12 +164,17 @@ app.post("/status", async (req, res) => {
 });
 
 app.delete("/messages/:messageID", async (req, res) => {
-    const {messageID} = req.params;
+    let {messageID} = req.params;
     const {user} = req.headers;
-    console.log("messageID", messageID);
-    console.log("user", user);
 
     try{
+        const deleteMessage = await db.collection("messages").findOne({_id: new ObjectId(messageID)});
+        if(!deleteMessage){
+            return res.status(404).send("Essa mensagem não existe!");
+        }else if(deleteMessage.from !== user){
+            return res.status(401).send("Você não tem autorização para deletar essa mensagem!");
+        }
+        await db.collection("messages").deleteOne({_id: new ObjectId(messageID)});
         res.sendStatus(200);
     }catch(e){
         res.sendStatus(500);
