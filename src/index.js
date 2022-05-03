@@ -39,16 +39,13 @@ app.post("/participants", async (req, res) => {
     
     const validation = userSchema.validate({name}, {abortEarly: false});
     if(validation.error){
-        console.log(validation.error.details.map(detail => detail.message)); // TODO: erase me
         return res.status(422).send("Nome deve ser string não vazio!");
     }
-    
     try{
         nameAlreadyExist = await db.collection("participants").findOne({name});
         if(nameAlreadyExist){
             return res.status(409).send("O nome escolhido já existe!");
         }
-
         await db.collection("messages").insertOne({
             from: name,
             to: 'Todos',
@@ -56,7 +53,6 @@ app.post("/participants", async (req, res) => {
             type: 'status',
             time: dayjs().format('HH:mm:ss')
         });
-        
         await db.collection("participants").insertOne({name, lastStatus: Date.now()});
         res.sendStatus(201);
     }catch(e){
@@ -84,7 +80,6 @@ app.post("/messages", async (req, res) => {
     if(validation.error || (type !== "private_message" && type !== "message")){
         return res.status(422).send("Erro ao enviar mensagem!");
     }
-    
     try{
         participantExists = await db.collection("participants").findOne({name: from});
         if(!participantExists){
@@ -108,27 +103,16 @@ app.get("/messages", async (req, res) => {
     const { user } = req.headers;
     const limit = parseInt(req.query.limit);
     
-    // gabriel: 10     enviou:7     recebeu:3
-    // didi:    7      enviou:5     recebeu:2
-    // ana:     3      enviou:1     recebeu:2
-    // julia:   3      enviou:1     recebeu:1
-    // gus:     1      enviou:1     recebeu:0
-    
     try{
         const allMessages = await db.collection("messages").find({ $or: [ { from: user }, { to: user }, { to: "Todos" }, { type: "message" } ] }).toArray();
-        // const allMessages = await db.collection("messages").find({}).toArray();
-        
-        console.log("allMessages: ", allMessages.length)// TODO:erase me
         allMessages.reverse();
         if(!limit){
-            console.log("No limit") // TODO:erase me
             return res.status(200).send(allMessages);
         }else{
             const messages = [];
             for(let i = 0; (i < allMessages.length && i < limit); i++){
                 messages.push(allMessages[i]);
             }
-            console.log(`Limit ${limit}`) // TODO:erase me
             return res.status(200).send(messages);
         }
     }catch(e){
@@ -139,27 +123,20 @@ app.get("/messages", async (req, res) => {
 
 app.post("/status", async (req, res) => {
     const {user: name} = req.headers;
-    console.log(name);////////////////
-    
-    // const validation = userSchema.validate({name}, {abortEarly: false});
-    // if(validation.error){
-        //     return res.status(422).send("Erro ao atualizar status do usuário!");
-        // }
         
-        try{
-            const participantExists = await db.collection("participants").findOne({name});
+    try{
+        const participantExists = await db.collection("participants").findOne({name});
         if(!participantExists){
             return res.sendStatus(404);
         }
-
         await db.collection("participants").updateOne(
             {name: participantExists.name},
             {$set: {lastStatus: Date.now()}}
-            );
-            res.sendStatus(200);
-        }catch(e){
-            console.log("Error on POST /messages", e);
-            res.sendStatus(500);
+        );
+        res.sendStatus(200);
+    }catch(e){
+        console.log("Error on POST /messages", e);
+        res.sendStatus(500);
     }
 });
 
@@ -186,25 +163,21 @@ app.put("/messages/:messageID", async (req, res) => {
     const {user: from} = req.headers;
     const {messageID} = req.params;
 
-    console.log(to, text, type, from, messageID)
     const validation = messageSchema.validate({from, to, text, type}, {abortEarly: false});
     if(validation.error || (type !== "private_message" && type !== "message")){
         return res.status(422).send("Erro ao enviar mensagem!");
-    }
-        
+    }   
     try{
         const participantExists = await db.collection("participants").findOne({name: from});
         if(!participantExists){
             return res.status(404).send("Usuário não encontrado!");
         }
-
         const changeMessage = await db.collection("messages").findOne({_id: new ObjectId(messageID)});
         if(!changeMessage){
             return res.status(404).send("Essa mensagem não existe!");
         }else if(changeMessage.from !== from){
             return res.status(401).send("Você não tem autorização para deletar essa mensagem!");
         }
-
         await db.collection("messages").updateOne(
             {_id: new ObjectId(messageID)},
             {$set: {to, text, type}}
